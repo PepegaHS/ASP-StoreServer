@@ -85,7 +85,6 @@ namespace StoreServer.Services
                 return null;
             }
 
-            // Nullable PATCH fields retain the same merge semantics as the other services.
             if (dto.Quantity.HasValue)
             {
                 AdjustQuantity(reservation, dto.Quantity.Value);
