@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace StoreServer.models;
@@ -15,4 +15,6 @@ public partial class Order
 
     public string OrderStatus { get; set; } = null!;
 
+    public virtual User User { get; set; } = null!;
+    public virtual ICollection<OrderItem> Items { get; set; } = new List<OrderItem>();
 }

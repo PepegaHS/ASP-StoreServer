@@ -9,5 +9,7 @@ namespace StoreServer.models.DTO
         public int IdProduct { get; set; }
 
         public int Quantity { get; set; }
+        public CartSummaryDTO Cart { get; set; } = null!;
+        public ProductDTO Product { get; set; } = null!;
     }
 }

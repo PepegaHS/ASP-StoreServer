@@ -1,4 +1,4 @@
-﻿namespace StoreServer.models.DTO
+namespace StoreServer.models.DTO
 {
     // DTO for patching a product
     public class PatchProductDTO
@@ -12,5 +12,7 @@
 
         public int? IdCategory { get; set; }
 
+        [System.ComponentModel.DataAnnotations.Range(0, int.MaxValue)]
+        public int? AvailableQuantity { get; set; }
     }
 }

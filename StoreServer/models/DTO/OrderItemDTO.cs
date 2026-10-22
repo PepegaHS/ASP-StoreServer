@@ -11,5 +11,7 @@ namespace StoreServer.models.DTO
         public int Quantity { get; set; }
 
         public decimal PriceAtMoment { get; set; }
+        public OrderSummaryDTO Order { get; set; } = null!;
+        public ProductDTO Product { get; set; } = null!;
     }
 }

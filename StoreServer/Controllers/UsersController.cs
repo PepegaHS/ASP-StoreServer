@@ -1,121 +1,116 @@
-﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using StoreServer.models;
 using StoreServer.models.DTO;
-
+using StoreServer.Services;
 
 namespace StoreServer.Controllers
 {
     [Route("api/[controller]")]
-    public class UsersController : Controller
+    [ApiController]
+    public class UsersController : ControllerBase
     {
-        private readonly WebStoreContext _context;
+        private readonly IUserService _service;
 
-        public UsersController(WebStoreContext context)
+        public UsersController(IUserService service)
         {
-            _context = context;
-        }
-
-        private static UserDTO ToDTO(User user)
-        {
-            return new UserDTO
-            {
-                IdUser = user.IdUser,
-                Login = user.Login,
-                PasswordHash = user.PasswordHash,
-                IdRole = user.IdRole
-            };
+            _service = service;
         }
 
         [HttpGet]
-        public IActionResult GetAll(int page = 1, int pageSize = 10)
+        public async Task<IActionResult> GetAll(int page = 1, int pageSize = 10, CancellationToken cancellationToken = default)
         {
-            var users = _context.Users
-                .OrderBy(u => u.IdUser)
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToList()
-                .Select(ToDTO)
-                .ToList();
-            return Ok(users);
+            try
+            {
+                var (items, total) = await _service.GetAllAsync(page, pageSize, cancellationToken);
+                Response.Headers["X-Total-Count"] = total.ToString();
+                return Ok(items);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
         }
 
         [HttpGet("{id}")]
-        public IActionResult GetById(int id)
+        public async Task<IActionResult> GetById(int id, CancellationToken cancellationToken = default)
         {
-            var user = _context.Users.Find(id);
-            if (user == null)
+            var item = await _service.GetByIdAsync(id, cancellationToken);
+            if (item == null)
             {
                 return NotFound();
             }
-            return Ok(ToDTO(user));
+
+            return Ok(item);
         }
 
         [HttpPost]
-        public IActionResult Create(CreateUserDTO dto)
+        public async Task<IActionResult> Create(CreateUserDTO dto, CancellationToken cancellationToken = default)
         {
-            var user = new User
+            try
             {
-                Login = dto.Login,
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
-                IdRole = dto.IdRole
-            };
-            _context.Users.Add(user);
-            _context.SaveChanges();
-            return CreatedAtAction(nameof(GetById), new { id = user.IdUser }, ToDTO(user));
+                var item = await _service.CreateAsync(dto, cancellationToken);
+                return CreatedAtAction(nameof(GetById), new { id = item.IdUser }, item);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
         }
 
         [HttpPut("{id}")]
-        public IActionResult Update(int id, UpdateUserDTO dto)
+        public async Task<IActionResult> Update(int id, UpdateUserDTO dto, CancellationToken cancellationToken = default)
         {
-            var user = _context.Users.Find(id);
-            if (user == null)
+            try
             {
-                return NotFound();
-            }
-            user.Login = dto.Login;
-            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password);
-            user.IdRole = dto.IdRole;
-            _context.SaveChanges();
-            return NoContent();
-        }
+                var item = await _service.UpdateAsync(id, dto, cancellationToken);
+                if (item == null)
+                {
+                    return NotFound();
+                }
 
-        [HttpDelete("{id}")]
-        public IActionResult Delete(int id)
-        {
-            var user = _context.Users.Find(id);
-            if (user == null)
-            {
-                return NotFound();
+                return NoContent();
             }
-            _context.Users.Remove(user);
-            _context.SaveChanges();
-            return NoContent();
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
         }
 
         [HttpPatch("{id}")]
-        public IActionResult Patch(int id, PatchUserDTO dto)
+        public async Task<IActionResult> Patch(int id, PatchUserDTO dto, CancellationToken cancellationToken = default)
         {
-            var user = _context.Users.Find(id);
-            if (user == null)
+            try
             {
-                return NotFound();
+                var item = await _service.PatchAsync(id, dto, cancellationToken);
+                if (item == null)
+                {
+                    return NotFound();
+                }
+
+                return NoContent();
             }
-            if (dto.Login != null)
+            catch (InvalidOperationException ex)
             {
-                user.Login = dto.Login;
+                return BadRequest(new { error = ex.Message });
             }
-            if (dto.Password != null)
-            {
-                user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password);
-            }
-            if (dto.IdRole.HasValue)
-            {
-                user.IdRole = dto.IdRole.Value;
-            }
-            _context.SaveChanges();
-            return NoContent();
         }
 
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var deleted = await _service.DeleteAsync(id, cancellationToken);
+                if (!deleted)
+                {
+                    return NotFound();
+                }
+
+                return NoContent();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
     }
 }

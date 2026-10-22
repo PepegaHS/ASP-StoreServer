@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace StoreServer.models;
@@ -15,4 +15,6 @@ public partial class OrderItem
 
     public decimal PriceAtMoment { get; set; }
 
+    public virtual Order Order { get; set; } = null!;
+    public virtual Product Product { get; set; } = null!;
 }

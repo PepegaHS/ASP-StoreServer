@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace StoreServer.models;
@@ -15,4 +15,9 @@ public partial class Product
 
     public int IdCategory { get; set; }
 
-   }
+    public virtual Category Category { get; set; } = null!;
+    public virtual ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();
+    public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
+    public virtual ICollection<ProductReservation> Reservations { get; set; } = new List<ProductReservation>();
+    public int AvailableQuantity { get; set; }
+}

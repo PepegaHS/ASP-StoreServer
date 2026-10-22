@@ -1,48 +1,28 @@
-﻿using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using StoreServer.models;
 using StoreServer.models.DTO;
-using System.Security.Cryptography;
-using System.Text;
+using StoreServer.Services;
 
 namespace StoreServer.Controllers
 {
     public class AuthController : Controller
     {
-        private readonly WebStoreContext _context;
+        private readonly IAuthService _service;
 
-        public AuthController(WebStoreContext context)
+        public AuthController(IAuthService service)
         {
-            _context = context;
+            _service = service;
         }
 
         [HttpPost("login")]
-        public IActionResult Login(LoginDTO dto)
+        public async Task<IActionResult> Login(LoginDTO dto, CancellationToken cancellationToken = default)
         {
-            var user = _context.Users
-                .FirstOrDefault(u => u.Login == dto.Login);
-
+            var user = await _service.LoginAsync(dto, cancellationToken);
             if (user == null)
             {
                 return Unauthorized("Неверный логин или пароль");
             }
 
-
-            bool passwordIsValid = BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash);
-
-            if (!passwordIsValid)
-            {
-                return Unauthorized("Неверный логин или пароль");
-            }
-
-            return Ok(new
-            {
-                idUser = user.IdUser,
-                login = user.Login,
-                idRole = user.IdRole
-            });
+            return Ok(user);
         }
     }
 }
-

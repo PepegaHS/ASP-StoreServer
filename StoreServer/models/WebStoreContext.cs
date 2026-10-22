@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 
@@ -32,9 +32,16 @@ public partial class WebStoreContext : DbContext
 
     public virtual DbSet<User> Users { get; set; }
 
+    public virtual DbSet<ProductReservation> ProductReservations { get; set; }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseSqlServer("Data Source=PepegaHS-P1\\SQLEXPRESS;Initial Catalog=web_store;Integrated Security=True;Trust Server Certificate=True");
+    {
+        if (!optionsBuilder.IsConfigured)
+        {
+            optionsBuilder.UseSqlServer("Data Source=PepegaHS-P1\\SQLEXPRESS;Initial Catalog=web_store;Integrated Security=True;Trust Server Certificate=True");
+        }
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -172,6 +179,76 @@ public partial class WebStoreContext : DbContext
                 .HasColumnName("password_hash");
 
 
+        });
+
+        modelBuilder.Entity<User>()
+            .HasOne(x => x.Role)
+            .WithMany(x => x.Users)
+            .HasForeignKey(x => x.IdRole)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Product>()
+            .HasOne(x => x.Category)
+            .WithMany(x => x.Products)
+            .HasForeignKey(x => x.IdCategory)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Cart>()
+            .HasOne(x => x.User)
+            .WithMany(x => x.Carts)
+            .HasForeignKey(x => x.IdUser)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<CartItem>()
+            .HasOne(x => x.Cart)
+            .WithMany(x => x.Items)
+            .HasForeignKey(x => x.IdCart)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<CartItem>()
+            .HasOne(x => x.Product)
+            .WithMany(x => x.CartItems)
+            .HasForeignKey(x => x.IdProduct)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Order>()
+            .HasOne(x => x.User)
+            .WithMany(x => x.Orders)
+            .HasForeignKey(x => x.IdUser)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<OrderItem>()
+            .HasOne(x => x.Order)
+            .WithMany(x => x.Items)
+            .HasForeignKey(x => x.IdOrder)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<OrderItem>()
+            .HasOne(x => x.Product)
+            .WithMany(x => x.OrderItems)
+            .HasForeignKey(x => x.IdProduct)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Product>()
+            .Property(x => x.AvailableQuantity)
+            .HasColumnName("available_quantity")
+            .HasDefaultValue(0)
+            .IsConcurrencyToken();
+
+        modelBuilder.Entity<ProductReservation>(entity =>
+        {
+            entity.ToTable("ProductReservations");
+            entity.HasKey(x => x.IdProductReservation);
+            entity.Property(x => x.IdProductReservation).HasColumnName("ID_product_reservation");
+            entity.Property(x => x.IdProduct).HasColumnName("ID_product");
+            entity.Property(x => x.IdUser).HasColumnName("ID_user");
+            entity.Property(x => x.Quantity).HasColumnName("quantity");
+            entity.Property(x => x.CreatedAt).HasColumnName("created_at").HasColumnType("datetime2");
+            entity.Property(x => x.CancelledAt).HasColumnName("cancelled_at").HasColumnType("datetime2").IsConcurrencyToken();
+            entity.HasOne(x => x.Product).WithMany(x => x.Reservations)
+                .HasForeignKey(x => x.IdProduct).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.User).WithMany(x => x.Reservations)
+                .HasForeignKey(x => x.IdUser).OnDelete(DeleteBehavior.Restrict);
         });
 
         OnModelCreatingPartial(modelBuilder);

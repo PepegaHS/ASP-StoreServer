@@ -1,4 +1,4 @@
-﻿namespace StoreServer.models.DTO
+namespace StoreServer.models.DTO
 {
     public class CategoryDTO
     {
@@ -7,5 +7,6 @@
         public string CategoryName { get; set; } = null!;
 
         public string? CategoryDescription { get; set; }
+        public List<ProductSummaryDTO> Products { get; set; } = new();
     }
 }

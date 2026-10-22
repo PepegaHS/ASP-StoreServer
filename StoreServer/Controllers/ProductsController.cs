@@ -1,8 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using StoreServer.models;
+using Microsoft.AspNetCore.Mvc;
 using StoreServer.models.DTO;
-
-// For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+using StoreServer.Services;
 
 namespace StoreServer.Controllers
 {
@@ -10,125 +8,109 @@ namespace StoreServer.Controllers
     [ApiController]
     public class ProductsController : ControllerBase
     {
-        private readonly WebStoreContext _context;
+        private readonly IProductService _service;
 
-        public ProductsController(WebStoreContext context)
+        public ProductsController(IProductService service)
         {
-            _context = context; 
-        }
-
-        private static Product ToDTO(Product product)
-        {
-            return new Product
-            {
-                IdProduct = product.IdProduct,
-                ProductName = product.ProductName,
-                ProductDescription = product.ProductDescription,
-                Price = product.Price,
-                IdCategory = product.IdCategory
-            };
+            _service = service;
         }
 
         [HttpGet]
-        public IActionResult GetAll(int page = 1, int pageSize = 10)
+        public async Task<IActionResult> GetAll(int page = 1, int pageSize = 10, CancellationToken cancellationToken = default)
         {
-            var products = _context.Products
-                .OrderBy(p => p.IdProduct)
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToList()
-                .Select(ToDTO)
-                .ToList();
-
-            return Ok(products);
+            try
+            {
+                var (items, total) = await _service.GetAllAsync(page, pageSize, cancellationToken);
+                Response.Headers["X-Total-Count"] = total.ToString();
+                return Ok(items);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
         }
 
         [HttpGet("{id}")]
-        public IActionResult GetById(int id)
+        public async Task<IActionResult> GetById(int id, CancellationToken cancellationToken = default)
         {
-            var product = _context.Products.Find(id);
-            if (product == null)
+            var item = await _service.GetByIdAsync(id, cancellationToken);
+            if (item == null)
             {
                 return NotFound();
             }
-            return Ok(ToDTO(product));
+
+            return Ok(item);
         }
 
         [HttpPost]
-        public IActionResult Create(CreateProductDTO dto)
+        public async Task<IActionResult> Create(CreateProductDTO dto, CancellationToken cancellationToken = default)
         {
-            var product = new Product
+            try
             {
-                ProductName = dto.ProductName,
-                ProductDescription = dto.ProductDescription,
-                Price = dto.Price,
-                IdCategory = dto.IdCategory
-            };
-            _context.Products.Add(product);
-            _context.SaveChanges();
-            return CreatedAtAction(nameof(GetById), new { id = product.IdProduct }, ToDTO(product));
+                var item = await _service.CreateAsync(dto, cancellationToken);
+                return CreatedAtAction(nameof(GetById), new { id = item.IdProduct }, item);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
         }
 
         [HttpPut("{id}")]
-        public IActionResult Update(int id, UpdateProductDTO dto)
+        public async Task<IActionResult> Update(int id, UpdateProductDTO dto, CancellationToken cancellationToken = default)
         {
-            var product = _context.Products.Find(id);
-            if (product == null)
+            try
             {
-                return NotFound();
+                var item = await _service.UpdateAsync(id, dto, cancellationToken);
+                if (item == null)
+                {
+                    return NotFound();
+                }
+
+                return NoContent();
             }
-
-            product.ProductName = dto.ProductName;
-            product.ProductDescription = dto.ProductDescription;
-            product.Price = dto.Price;
-            product.IdCategory = dto.IdCategory;
-
-            _context.SaveChanges();
-            return NoContent();
-        }
-
-        [HttpDelete("{id}")]
-        public IActionResult Delete(int id)
-        {
-            var product = _context.Products.Find(id);
-            if (product == null)
+            catch (InvalidOperationException ex)
             {
-                return NotFound();
+                return BadRequest(new { error = ex.Message });
             }
-
-            _context.Products.Remove(product);
-            _context.SaveChanges();
-            return NoContent();
         }
 
         [HttpPatch("{id}")]
-        public IActionResult Patch(int id, PatchProductDTO dto)
+        public async Task<IActionResult> Patch(int id, PatchProductDTO dto, CancellationToken cancellationToken = default)
         {
-            var product = _context.Products.Find(id);
-            if (product == null)
+            try
             {
-                return NotFound();
-            }
+                var item = await _service.PatchAsync(id, dto, cancellationToken);
+                if (item == null)
+                {
+                    return NotFound();
+                }
 
-            if (dto.ProductName != null)
-            {
-                product.ProductName = dto.ProductName;
+                return NoContent();
             }
-            if (dto.ProductDescription != null)
+            catch (InvalidOperationException ex)
             {
-                product.ProductDescription = dto.ProductDescription;
+                return BadRequest(new { error = ex.Message });
             }
-            if (dto.Price != null)
-            {
-                product.Price = dto.Price.Value;
-            }
-            if (dto.IdCategory != null)
-            {
-                product.IdCategory = dto.IdCategory.Value;
-            }
+        }
 
-            _context.SaveChanges();
-            return NoContent();
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var deleted = await _service.DeleteAsync(id, cancellationToken);
+                if (!deleted)
+                {
+                    return NotFound();
+                }
+
+                return NoContent();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
         }
     }
 }
